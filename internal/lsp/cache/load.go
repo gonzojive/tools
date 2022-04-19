@@ -7,6 +7,7 @@ package cache
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -133,7 +134,7 @@ func (s *snapshot) load(ctx context.Context, allowNetwork bool, scopes ...interf
 	}
 	if len(pkgs) == 0 {
 		if err == nil {
-			err = fmt.Errorf("no packages returned")
+			err = fmt.Errorf("no packages returned: %v", packagesConfigDebug(cfg))
 		}
 		return errors.Errorf("%v: %w", err, source.PackagesLoadError)
 	}
@@ -504,4 +505,22 @@ func isTestMain(pkg *packages.Package, gocache string) bool {
 		return false
 	}
 	return true
+}
+
+func jsonString(thing interface{}) string {
+	got, err := json.Marshal(thing)
+	if err != nil {
+		return fmt.Sprintf("error encoding json for %v", thing)
+	}
+	return string(got)
+}
+
+func packagesConfigDebug(cfg *packages.Config) string {
+	driver := ""
+	for _, entry := range cfg.Env {
+		if got := strings.TrimPrefix(entry, "GOPACKAGESDRIVER="); got != entry {
+			driver = got
+		}
+	}
+	return fmt.Sprintf("GOPACKAGESDRIVER=%q", driver)
 }

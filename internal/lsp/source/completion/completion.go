@@ -1468,6 +1468,7 @@ func (c *completer) unimportedPackages(ctx context.Context, seen map[string]stru
 		if !strings.HasPrefix(pkg.GetTypes().Name(), prefix) {
 			continue
 		}
+		// TODO: Check that package is not defined in an excluded dir?
 		paths = append(paths, path)
 	}
 
@@ -1548,9 +1549,15 @@ func (c *completer) unimportedPackages(ctx context.Context, seen map[string]stru
 		})
 		count++
 	}
+	shouldIncludePackage := func(pkgDir, importPathShort, packageName string) bool {
+		if strings.Contains(pkgDir, "generated_stuff") {
+			return false
+		}
+		return true
+	}
 	c.completionCallbacks = append(c.completionCallbacks, func(opts *imports.Options) error {
 		defer cancel()
-		return imports.GetAllCandidates(ctx, add, prefix, c.filename, c.pkg.GetTypes().Name(), opts.Env)
+		return imports.GetFilteredCandidates(ctx, shouldIncludePackage, add, prefix, c.filename, c.pkg.GetTypes().Name(), opts.Env)
 	})
 	return nil
 }
